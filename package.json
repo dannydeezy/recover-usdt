@@ -1,0 +1,25 @@
+{
+  "name": "recover-usdt",
+  "version": "1.0.0",
+  "description": "",
+  "main": "recover.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dannybitgo/recover-usdt.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/dannybitgo/recover-usdt/issues"
+  },
+  "homepage": "https://github.com/dannybitgo/recover-usdt#readme",
+  "dependencies": {
+    "bip32": "^1.0.2",
+    "bitcoinjs-lib": "^4.0.2",
+    "bluebird": "^3.5.3",
+    "omni-simple-send": "0.0.1"
+  }
+}

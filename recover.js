@@ -13,6 +13,8 @@ let txInAmt = -1;
 const destAddr = '';
 const changeAddr = '';
 const tetherAmount = 5e8 // 5 USDT
+const ep1 = '';
+const ep2 = '';
 /**
  * End of custom fields
  */
@@ -64,19 +66,27 @@ const signTx = function(pubkeys, prvs) {
 }
 
 const execute = co(function *() {
+
     const wallet = yield bitgo.coin(coin).wallets().get({ id: walletId });
+
     const keyids = wallet._wallet.keys;
     const keychains = [];
-    const prvs = [];
+    //const prvs = [];
     for(i in keyids) {
         const keyid = keyids[i];
         const keychain = yield bitgo.coin(coin).keychains().get({ id: keyid });
         keychains.push(keychain);
+        /*
         if (keychain.encryptedPrv) {
             const prv = bitgo.decrypt({password:walletPasscode, input:keychain.encryptedPrv});
             prvs.push(prv);
         }
+        */
     }
+
+    const p1 = bitgo.decrypt({password:walletPasscode, input:ep1});
+    const p2 = bitgo.decrypt({password:walletPasscode, input:ep2});
+    const prvs = [ep1, ep2];
 
     if (prvs.length !== 2) {
         throw new Error('Expected 2 private keys but got ' + prvs.length);

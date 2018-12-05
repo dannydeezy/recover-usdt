@@ -1,42 +1,42 @@
 
+
 /**
  * TODO: fill out the below fields with your specific information for this recovery
  */
-const pathToBitGoJSIndex = '../BitGoJS/src/index.js';
-const accessToken = '';
-const walletId = '';
-const address = ''
+
+const address = '';
 const walletPasscode = '';
 const rawInTx = '';
 const inputIndex = -1;
 let txInAmt = -1;
 const destAddr = '';
-const changeAddr = '';
-const tetherAmount = 5e8 // 5 USDT
-const ep1 = '';
-const ep2 = '';
+const changeAddr = address;
+const tetherAmount = 1e8 // 1 USDT
+const ep1 = {};
+const ep2 = {};
+const bitgoPublicKey = '';
+const SWnum = 2;
 /**
  * End of custom fields
  */
 
 
 const bitcoin = require('bitcoinjs-lib');
+const sjcl = require('sjcl');
 const bip32 = require('bip32');
 const Promise = require('bluebird');
 const co = Promise.coroutine;
 const omniSend = require('omni-simple-send');
-const BitGoJS = require(pathToBitGoJSIndex);
-const bitgo = new BitGoJS.BitGo({env:"prod"});
-bitgo.authenticateWithAccessToken({accessToken});
 const coin = 'btc';
 
-const signTx = function(pubkeys, prvs) {
+const signTx = function(pubkeys, prvs, path) {
     const toBig = 100000000;
     txInAmt *= toBig;
     const dust = .0000059 * toBig;
     const miningFee = .000122 * toBig;
     const changeAmt = txInAmt - dust - miningFee;
     const txb = new bitcoin.TransactionBuilder();
+
     const inTx = bitcoin.Transaction.fromHex(rawInTx);
     const token = 31   //USDT
     const omniData = omniSend(token, tetherAmount);
@@ -53,8 +53,11 @@ const signTx = function(pubkeys, prvs) {
     const p2wsh = bitcoin.payments.p2wsh({ redeem: p2ms })
     const p2sh = bitcoin.payments.p2sh({ redeem: p2wsh })
 
-    const keyPair1 = bip32.fromBase58(prvs[0]);
-    const keyPair2 = bip32.fromBase58(prvs[1]);
+    let keyPair1 = bip32.fromBase58(prvs[0], txb.network);
+    let keyPair2 = bip32.fromBase58(prvs[1], txb.network);
+
+    keyPair1 = keyPair1.derivePath(path);
+    keyPair2 = keyPair2.derivePath(path);
 
     txb.sign(0, keyPair1, p2sh.redeem.output, null, txInAmt, p2wsh.redeem.output);
     txb.sign(0, keyPair2, p2sh.redeem.output, null, txInAmt, p2wsh.redeem.output);
@@ -67,36 +70,18 @@ const signTx = function(pubkeys, prvs) {
 
 const execute = co(function *() {
 
-    const wallet = yield bitgo.coin(coin).wallets().get({ id: walletId });
-
-    const keyids = wallet._wallet.keys;
-    const keychains = [];
-    //const prvs = [];
-    for(i in keyids) {
-        const keyid = keyids[i];
-        const keychain = yield bitgo.coin(coin).keychains().get({ id: keyid });
-        keychains.push(keychain);
-        /*
-        if (keychain.encryptedPrv) {
-            const prv = bitgo.decrypt({password:walletPasscode, input:keychain.encryptedPrv});
-            prvs.push(prv);
-        }
-        */
-    }
-
-    const p1 = bitgo.decrypt({password:walletPasscode, input:ep1});
-    const p2 = bitgo.decrypt({password:walletPasscode, input:ep2});
-    const prvs = [ep1, ep2];
+    const p1 = sjcl.decrypt(walletPasscode, JSON.stringify(ep1));
+    const p2 = sjcl.decrypt(walletPasscode, JSON.stringify(ep2));
+    const prvs = [p1, p2];
 
     if (prvs.length !== 2) {
         throw new Error('Expected 2 private keys but got ' + prvs.length);
     }
 
-    const addr = yield wallet.getAddress({address});
-    const node0 = bip32.fromBase58(keychains[0].pub);
-    const node1 = bip32.fromBase58(keychains[1].pub);
-    const node2 = bip32.fromBase58(keychains[2].pub);
-    const path = '0/0/' + addr.chain + '/' + addr.index;
+    const node0 = bip32.fromBase58(p1);
+    const node1 = bip32.fromBase58(p2);
+    const node2 = bip32.fromBase58(bitgoPublicKey);
+    const path = '0/0/10/' + SWnum;
     const child0 = node0.derivePath(path);
     const child1 = node1.derivePath(path);
     const child2 = node2.derivePath(path);
@@ -114,7 +99,7 @@ const execute = co(function *() {
     }
 
     console.log('Got wallet data, now attempting to sign transaction...');
-    signTx(pubkeys, prvs);
+    signTx(pubkeys, prvs, path);
 
 });
 

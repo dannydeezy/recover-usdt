@@ -20,6 +20,7 @@
     "bip32": "^1.0.2",
     "bitcoinjs-lib": "^4.0.2",
     "bluebird": "^3.5.3",
-    "omni-simple-send": "0.0.1"
+    "omni-simple-send": "0.0.1",
+    "sjcl": "^1.0.8"
   }
 }

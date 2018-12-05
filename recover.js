@@ -31,10 +31,10 @@ const coin = 'btc';
 
 const signTx = function(pubkeys, prvs, path) {
     const toBig = 100000000;
-    txInAmt *= toBig;
-    const dust = .0000059 * toBig;
-    const miningFee = .000122 * toBig;
-    const changeAmt = txInAmt - dust - miningFee;
+    txInAmt = Math.round(txInAmt*toBig);
+    const dust = Math.round(.0000059 * toBig);
+    const miningFee = Math.round(.000122 * toBig);
+    const changeAmt = Math.round(txInAmt - dust - miningFee);
     const txb = new bitcoin.TransactionBuilder();
 
     const inTx = bitcoin.Transaction.fromHex(rawInTx);
@@ -42,7 +42,7 @@ const signTx = function(pubkeys, prvs, path) {
     const omniData = omniSend(token, tetherAmount);
     const customOPReturn = omniData.toString('hex');
     const data = Buffer.from(customOPReturn, 'hex');
-    const embed = bitcoin.payments.embed({ data: [data] })
+    const embed = bitcoin.payments.embed({ data: [data] });
 
     txb.addInput(inTx, inputIndex);
     txb.addOutput(destAddr, dust);

@@ -4,18 +4,18 @@
  * TODO: fill out the below fields with your specific information for this recovery
  */
 
-const address = '';
-const walletPasscode = '';
-const rawInTx = '';
-const inputIndex = -1;
-let txInAmt = -1;
-const destAddr = '';
-const changeAddr = address;
-const tetherAmount = 1e8 // 1 USDT
-const ep1 = {};
-const ep2 = {};
-const bitgoPublicKey = '';
-const SWnum = 2;
+const address = ''; // the bitgo address where the usdt is stuck
+const walletPasscode = ''; // the passcode for the bitgo wallet that contains the above address
+const rawInTx = ''; // the transaction hex for any utxo owned by the above address - this will fund the recovery transaction
+const inputIndex = -1; // the index of the output used from the above transaction hex
+let txInAmt = -1; // the amount (in BTC) of the output being used above
+const destAddr = ''; // the destination address where you'd like the tether sent to
+const changeAddr = address; // the address where change from the transaction will be sent. recommended to leave this as is (changeAddr = address)
+const tetherAmount = 1e8; // the amount of tether to send in the recovery transaction (1e8 = 1 usdt)
+const ep1 = {}; // the value of Box A of your wallet keycard - this is your encrypted user key
+const ep2 = {}; // the value of Box B of your wallet keycard - this is your encrypted backup key
+const bitgoPublicKey = ''; // the value of Box C of your wallet keycard - this is the bitgo public key for your wallet
+const SWnum = 2; // this is the 'index' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function
 /**
  * End of custom fields
  */

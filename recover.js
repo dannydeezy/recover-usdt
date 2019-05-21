@@ -13,7 +13,7 @@ const destAddr = ''; // the destination address where you'd like the tether sent
 const changeAddr = address; // the address where change from the transaction will be sent. recommended to leave this as is (changeAddr = address)
 const tetherAmount = 1e8; // the amount of tether to send in the recovery transaction (1e8 = 1 usdt)
 const ep1 = {}; // the value of Box A of your wallet keycard - this is your encrypted user key
-const ep2 = {}; // the value of Box B of your wallet keycard - this is your encrypted backup key
+const p2 = 'xpub....'; // the value of Box B of your wallet keycard - this is your backup xpub
 const bitgoPublicKey = ''; // the value of Box C of your wallet keycard - this is the bitgo public key for your wallet
 const SWnum = 2; // this is the 'index' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function
 /**
@@ -54,24 +54,20 @@ const signTx = function(pubkeys, prvs, path) {
     const p2sh = bitcoin.payments.p2sh({ redeem: p2wsh })
 
     let keyPair1 = bip32.fromBase58(prvs[0], txb.network);
-    let keyPair2 = bip32.fromBase58(prvs[1], txb.network);
 
     keyPair1 = keyPair1.derivePath(path);
-    keyPair2 = keyPair2.derivePath(path);
 
     txb.sign(0, keyPair1, p2sh.redeem.output, null, txInAmt, p2wsh.redeem.output);
-    txb.sign(0, keyPair2, p2sh.redeem.output, null, txInAmt, p2wsh.redeem.output);
 
-    const finalTx = txb.build();
+    const finalTx = txb.buildIncomplete();
 
-    console.log('Completed signing recovery transaction. Broadcast the following tx hex at https://www.smartbit.com.au/txs/pushtx : \n\n');
+    console.log('Completed signing recovery transaction. This transaction has been signed with the user key. Submit the transaction to BitGo for full-signing: \n\n');
     console.log(finalTx.toHex());
 }
 
 const execute = co(function *() {
 
     const p1 = sjcl.decrypt(walletPasscode, JSON.stringify(ep1));
-    const p2 = sjcl.decrypt(walletPasscode, JSON.stringify(ep2));
     const prvs = [p1, p2];
 
     if (prvs.length !== 2) {

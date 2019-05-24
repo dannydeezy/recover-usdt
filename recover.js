@@ -13,7 +13,7 @@ const destAddr = ''; // the destination address where you'd like the tether sent
 const changeAddr = address; // the address where change from the transaction will be sent. recommended to leave this as is (changeAddr = address)
 const tetherAmount = 1e8; // the amount of tether to send in the recovery transaction (1e8 = 1 usdt)
 const ep1 = {}; // the value of Box A of your wallet keycard - this is your encrypted user key
-const backupXprv = 'xprv...'; // the value of Box B of your wallet keycard - this is your encrypted backup key
+const backupXprv = 'xprv...'; // your backup key, as a string in xprv format
 const bitgoPublicKey = ''; // the value of Box C of your wallet keycard - this is the bitgo public key for your wallet
 const SWnum = 2; // this is the 'index' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function
 /**

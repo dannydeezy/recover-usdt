@@ -13,8 +13,8 @@ const tetherAmount = 1e8; // the amount of tether to send in the recovery transa
 const ep1 = {}; // the value of Box A of your wallet keycard - this is your encrypted user key
 const ep2 = {}; // the value of Box B of your wallet keycard - this is your encrypted backup key
 const bitgoPublicKey = ''; // the value of Box C of your wallet keycard - this is the bitgo public key for your wallet
-const addressIndex = -1; // this is the 'index' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function
-const addressChain = 10; // this is the 'chain' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function
+const addressIndex = -1; // this is the 'index' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function (if unsure, contact support@bitgo.com)
+const addressChain = 10; // this is the 'chain' of the address being used. find this using BitGoJS and the 'wallet.getAddress({address})' function (if unsure, contact support@bitgo.com)
 const mainnet = true; // leave as true for mainnet. Set to false for testnet
 /**
  * End of custom fields
@@ -28,9 +28,9 @@ const Promise = require('bluebird');
 const co = Promise.coroutine;
 const omniSend = require('omni-simple-send');
 const toBig = 100000000;
+const network = mainnet ? bitcoin.networks.bitcoin : bitcoin.networks.testnet;
 
 const getFundingUTXO = function(tx) {
-  const network = mainnet ? bitcoin.networks.bitcoin : bitcoin.networks.testnet;
   for (const index in tx.outs) {
     const a = bitcoin.address.fromOutputScript(tx.outs[index].script, network);
     if (a === address) {
@@ -43,14 +43,14 @@ const getFundingUTXO = function(tx) {
   throw new Error(`The fundingTxHex does not include an output with the address ${address}`);
 }
 
-const signTx = function(pubkeys, prvs, path) {
+const signTx = function(pubkeys, prvs, path, scripts) {
     const inTx = bitcoin.Transaction.fromHex(fundingTxHex);
     const fundingUTXO = getFundingUTXO(inTx);
     const txInAmt = fundingUTXO.value;
     const dust = Math.round(.0000059 * toBig);
     const miningFee = Math.round(.000122 * toBig);
     const changeAmt = Math.round(txInAmt - dust - miningFee);
-    const txb = new bitcoin.TransactionBuilder();
+    const txb = new bitcoin.TransactionBuilder(network);
 
     const token = 31   //USDT
     const omniData = omniSend(token, tetherAmount);
@@ -58,27 +58,25 @@ const signTx = function(pubkeys, prvs, path) {
     const data = Buffer.from(customOPReturn, 'hex');
     const embed = bitcoin.payments.embed({ data: [data] });
 
-    txb.addInput(inTx, fundingUTXO.vout);
+    txb.addInput(inTx.getId(), parseInt(fundingUTXO.vout));
     txb.addOutput(destAddr, dust);
     txb.addOutput(changeAddr, changeAmt);
     txb.addOutput(embed.output, 0);
 
-    const p2ms = bitcoin.payments.p2ms({ m: 2, pubkeys })
-    const p2wsh = bitcoin.payments.p2wsh({ redeem: p2ms })
-    const p2sh = bitcoin.payments.p2sh({ redeem: p2wsh })
-
-    let keyPair1 = bip32.fromBase58(prvs[0], txb.network);
-    let keyPair2 = bip32.fromBase58(prvs[1], txb.network);
+    let keyPair1 = bip32.fromBase58(prvs[0]);
+    keyPair1.network = network;
+    let keyPair2 = bip32.fromBase58(prvs[1]);
+    keyPair2.network = network;
 
     keyPair1 = keyPair1.derivePath(path);
     keyPair2 = keyPair2.derivePath(path);
 
-    txb.sign(0, keyPair1, p2sh.redeem.output, null, txInAmt, p2wsh.redeem.output);
-    txb.sign(0, keyPair2, p2sh.redeem.output, null, txInAmt, p2wsh.redeem.output);
+    txb.sign(0, keyPair1, scripts.p2sh.redeem.output, null, txInAmt, scripts.p2wsh.redeem.output);
+    txb.sign(0, keyPair2, scripts.p2sh.redeem.output, null, txInAmt, scripts.p2wsh.redeem.output);
 
     const finalTx = txb.build();
 
-    console.log('Completed signing recovery transaction. Broadcast the following tx hex at https://www.smartbit.com.au/txs/pushtx : \n\n');
+    console.log(`Completed signing recovery transaction. Broadcast the following tx hex at https://${mainnet ? 'www' : 'testnet'}.smartbit.com.au/txs/pushtx : \n\n`);
     console.log(finalTx.toHex());
 }
 
@@ -95,16 +93,25 @@ const execute = co(function *() {
     const node0 = bip32.fromBase58(p1);
     const node1 = bip32.fromBase58(p2);
     const node2 = bip32.fromBase58(bitgoPublicKey);
+    node0.network = network;
+    node1.network = network;
+    node2.network = network;
     const path = `0/0/${addressChain}/${addressIndex}`;
     const child0 = node0.derivePath(path);
     const child1 = node1.derivePath(path);
     const child2 = node2.derivePath(path);
     const pubkeys = [child0.publicKey, child1.publicKey, child2.publicKey];
-    const result = bitcoin.payments.p2sh({
-        redeem: bitcoin.payments.p2wsh({
-            redeem: bitcoin.payments.p2ms({ m: 2, pubkeys })
-        })
-    });
+
+    const p2ms = bitcoin.payments.p2ms({ m: 2, pubkeys, network });
+    const p2wsh = bitcoin.payments.p2wsh({ redeem: p2ms, network });
+    const p2sh = bitcoin.payments.p2sh({ redeem: p2wsh, network });
+
+    const scripts = {
+      p2wsh,
+      p2sh
+    };
+
+    const result = p2sh;
 
     if(result.address !== address) {
         console.log(result.address);
@@ -113,7 +120,7 @@ const execute = co(function *() {
     }
 
     console.log('Got wallet data, now attempting to sign transaction...');
-    signTx(pubkeys, prvs, path);
+    signTx(pubkeys, prvs, path, scripts);
 
 });
 
